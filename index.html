@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lector de Excel + Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- ============ SECCIÓN LECTOR EXCEL ============ -->
+    <div id="readerSection" class="container">
+        <h1>Lector de Excel</h1>
+
+        <div class="file-input-wrapper">
+            <label for="excelFile" class="btn">Seleccionar archivo Excel</label>
+            <input type="file" id="excelFile" accept=".xlsx, .xls">
+        </div>
+
+        <div id="sheetSelector" class="sheet-selector" style="display: none;">
+            <label for="sheetSelect">Selecciona una pestaña:</label>
+            <select id="sheetSelect"></select>
+            <button id="btnDashboard" class="btn btn-dashboard">Ver Dashboard</button>
+        </div>
+
+        <div id="tableContainer" class="table-container"></div>
+    </div>
+
+    <!-- ============ SECCIÓN DASHBOARD ============ -->
+    <div id="dashboardSection" class="dashboard-wrapper" style="display: none;">
+        
+        <!-- Sidebar de filtros -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Filtros</h2>
+                <button id="clearFilters" class="btn-clear">Limpiar</button>
+            </div>
+
+            <div class="filter-group">
+                <label><i class="fas fa-calendar"></i> Mes</label>
+                <select id="filterMes" class="filter-select"><option value="">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-warehouse"></i> Almacén</label>
+                <select id="filterAlmacen" class="filter-select"><option value="">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-building"></i> Delegación</label>
+                <select id="filterDelegacion" class="filter-select"><option value="">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-exchange-alt"></i> Sentido</label>
+                <select id="filterSentido" class="filter-select"><option value="">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-tag"></i> Tipo</label>
+                <select id="filterTipo" class="filter-select"><option value="">Todos</option></select>
+            </div>
+            <div class="filter-group">
+                <label><i class="fas fa-boxes"></i> Artículo</label>
+                <select id="filterArticulo" class="filter-select"><option value="">Todos</option></select>
+            </div>
+
+            <button id="btnVolver" class="btn-volver-sidebar">
+                <i class="fas fa-arrow-left"></i> Volver al lector
+            </button>
+        </aside>
+
+        <!-- Contenido principal -->
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <h1>Dashboard de Inventario</h1>
+            </header>
+
+            <!-- KPIs -->
+            <section class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Stock Valorizado</span>
+                        <span class="kpi-value" id="kpiStock">0</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-green"><i class="fas fa-arrow-down"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Ingreso Valorizado</span>
+                        <span class="kpi-value" id="kpiIngreso">0</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-red"><i class="fas fa-arrow-up"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Salida Valorizado</span>
+                        <span class="kpi-value" id="kpiSalida">0</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-blue"><i class="fas fa-sync-alt"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Rotación</span>
+                        <span class="kpi-value" id="kpiRotacion">0</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-orange"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">ERI</span>
+                        <span class="kpi-value" id="kpiEri">0</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gráficos -->
+            <section class="charts-grid">
+                <div class="chart-card">
+                    <h3>Movimientos por Mes</h3>
+                    <canvas id="chartBarras"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Entradas vs Salidas</h3>
+                    <canvas id="chartColumnas"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Distribución por Tipo</h3>
+                    <canvas id="chartAnillo"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Evolución de Stock</h3>
+                    <canvas id="chartLineas"></canvas>
+                </div>
+                <div class="chart-card chart-full">
+                    <h3>Stock por Almacén (Tabla Resumen)</h3>
+                    <div id="tablaResumen"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
