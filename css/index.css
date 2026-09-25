@@ -23,28 +23,16 @@ body {
 
 h1, h2 { font-weight: 600; color: var(--text); }
 
-.reader-section {
-    min-height: 100vh;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 40px 20px;
-}
-
+.reader-section { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 40px 20px; }
 .reader-container { max-width: 700px; width: 100%; }
-
 .reader-header { text-align: center; margin-bottom: 40px; }
 
 .reader-logo {
-    width: 70px;
-    height: 70px;
+    width: 70px; height: 70px;
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8rem;
-    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; color: white;
     margin: 0 auto 20px;
     box-shadow: 0 8px 30px rgba(58, 130, 200, 0.3);
 }
@@ -62,16 +50,12 @@ h1, h2 { font-weight: 600; color: var(--text); }
 }
 
 .upload-icon-circle {
-    width: 80px;
-    height: 80px;
+    width: 80px; height: 80px;
     background: rgba(58, 130, 200, 0.1);
     border: 2px solid rgba(58, 130, 200, 0.3);
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; color: var(--primary);
     margin: 0 auto 25px;
 }
 
@@ -80,68 +64,23 @@ h1, h2 { font-weight: 600; color: var(--text); }
 .upload-card input[type="file"] { display: none; }
 
 .btn-accent {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--primary);
-    color: white;
-    padding: 12px 28px;
-    border-radius: 10px;
-    border: none;
-    font-family: 'Inter', sans-serif;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.25s ease;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--primary); color: white;
+    padding: 12px 28px; border-radius: 10px; border: none;
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.9rem;
+    cursor: pointer; transition: all 0.25s ease;
 }
 
-.btn-accent:hover {
-    background: var(--primary-dark);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(58, 130, 200, 0.4);
-}
-
+.btn-accent:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(58, 130, 200, 0.4); }
 .btn-accent:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.sheet-status {
-    margin-top: 25px;
-    padding-top: 25px;
-    border-top: 1px solid var(--border);
-    text-align: left;
-}
-
+.sheet-status { margin-top: 25px; padding-top: 25px; border-top: 1px solid var(--border); text-align: left; }
 .status-title { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 12px; }
-
-.sheet-list {
-    list-style: none;
-    margin-bottom: 20px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.sheet-list li {
-    padding: 8px 12px;
-    background: rgba(58, 130, 200, 0.08);
-    border-left: 3px solid var(--primary);
-    border-radius: 5px;
-    margin-bottom: 6px;
-    font-size: 0.85rem;
-    color: var(--text);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
+.sheet-list { list-style: none; margin-bottom: 20px; max-height: 200px; overflow-y: auto; }
+.sheet-list li { padding: 8px 12px; background: rgba(58, 130, 200, 0.08); border-left: 3px solid var(--primary); border-radius: 5px; margin-bottom: 6px; font-size: 0.85rem; color: var(--text); display: flex; align-items: center; gap: 8px; }
 .sheet-list li i { color: var(--primary); font-size: 0.75rem; }
 
-.mensaje {
-    margin-top: 20px;
-    padding: 12px 20px;
-    border-radius: 10px;
-    font-size: 0.9rem;
-    display: none;
-}
-
+.mensaje { margin-top: 20px; padding: 12px 20px; border-radius: 10px; font-size: 0.9rem; display: none; }
 .mensaje.ok { display: block; background: rgba(57, 121, 64, 0.1); border: 1px solid rgba(57, 121, 64, 0.3); color: var(--green); }
 .mensaje.error { display: block; background: rgba(242, 111, 43, 0.1); border: 1px solid rgba(242, 111, 43, 0.3); color: var(--orange); }
 .mensaje.loading { display: block; background: rgba(58, 130, 200, 0.1); border: 1px solid rgba(58, 130, 200, 0.3); color: var(--primary); }
