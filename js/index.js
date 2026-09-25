@@ -1,5 +1,6 @@
-const SUPABASE_URL = "https://uoftarfxakkpevugdycg.supabase.co";
-const SUPABASE_KEY = "sb_publishable_vT_w6EoVLl-BK12ojRTaOg_UeSXAVvh";
+// ============ NUEVAS CREDENCIALES ============
+const SUPABASE_URL = "https://qhqrnnkuhsaszonippnj.supabase.co";
+const SUPABASE_KEY = "sb_publishable_aGjT0aecqNHf96Tm7QLMtw_qjCKs5n3";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let workbookData = null;
@@ -12,12 +13,8 @@ const btnSubir = document.getElementById('btnSubir');
 const mensaje = document.getElementById('mensaje');
 
 // ============ CONFIGURACIÓN POR HOJA ============
-// Aplicamos TÉCNICA DE DOBLE FILA en WORKLIST (encabezados en fila 5 y 6)
 const HOJAS_CONFIG = {
-    'WORKLIST': { headerRow: null, subHeaderRow: null, keywords: ['OT SAP', 'Proceso', 'EMPRESA', 'Text Orden'] },
-    'PowerApps': { headerRow: null, subHeaderRow: null, keywords: ['Item', 'OT SAP', '%Avance'] },
-    'OTs': { headerRow: null, subHeaderRow: null, keywords: ['Item', 'OT SAP', 'Criticidad'] },
-    'CurvaS_PdpAgost26': { headerRow: null, subHeaderRow: null, keywords: ['Numero', 'OT SAP', 'Hora'] }
+    'Hoja1': { headerRow: null, subHeaderRow: null, keywords: ['N°', 'CLASIFICACIÓN', 'FECHA', 'TICKET', 'PROVEEDOR'] }
 };
 
 fileInput.addEventListener('change', function (e) {
@@ -79,7 +76,7 @@ function procesarHoja(nombreHoja, worksheet) {
     let headersFinales = [];
     let dataStart = headerIndex + 1;
 
-    // TÉCNICA DE DOBLE FILA
+    // TÉCNICA DE DOBLE FILA (si aplica)
     if (subHeaderIndex !== null && subHeaderIndex !== undefined) {
         const fila2 = rows[subHeaderIndex] || [];
         headersFinales = combinarHeaders(fila1, fila2);
@@ -88,7 +85,6 @@ function procesarHoja(nombreHoja, worksheet) {
         headersFinales = fila1.map(h => (h || '').toString().trim());
     }
 
-    // Limpiar nombres y hacerlos únicos
     const headersUnicos = [];
     const contador = {};
     headersFinales.forEach((h, i) => {
@@ -127,14 +123,9 @@ function combinarHeaders(fila1, fila2) {
         if (v1 !== '') ultimoFila1 = v1;
 
         let resultado = '';
-
-        if (v1 !== '' && v2 !== '') {
-            resultado = v1 === v2 ? v1 : `${v1} ${v2}`;
-        } else if (v1 !== '') {
-            resultado = v1;
-        } else if (v2 !== '') {
-            resultado = ultimoFila1 ? `${ultimoFila1} ${v2}` : v2;
-        }
+        if (v1 !== '' && v2 !== '') resultado = v1 === v2 ? v1 : `${v1} ${v2}`;
+        else if (v1 !== '') resultado = v1;
+        else if (v2 !== '') resultado = ultimoFila1 ? `${ultimoFila1} ${v2}` : v2;
 
         headers.push(resultado);
     }
