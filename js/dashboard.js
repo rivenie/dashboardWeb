@@ -25,11 +25,13 @@ Chart.defaults.animation.duration = 450;
 Chart.defaults.plugins.datalabels.display = false;
 Chart.defaults.plugins.legend.display = false;
 
-const state = { mb52: null, lt22: null, zlx12: null, zwm: null, asistencia: null, horasExtra: null };
+const state = { mb52: null, lt22: null, zlx12: null, zwm: null, asistencia: null, horasExtra: null, factPedido: null, factPLU: null, recepPacking: null, recepDetalle: null };
 const charts = {};
 let listenersReady = false;
 let subActual = "resumen";
 let subActualA = "asistencia";
+let subActualF = "pedido";
+let subActualR = "packing";
 
 const fmt = (v, d = 0) =>
   Number(v).toLocaleString("es-PE", { maximumFractionDigits: d, minimumFractionDigits: 0 });
@@ -155,6 +157,29 @@ function renderHBar(id, labels, data, color1 = C.goldDark, color2 = C.goldLight,
         x: { ...scaleY(max * 1.18), ticks: { color: C.faint, callback: (v) => fmt(v), maxTicksLimit: 5 } },
         y: { grid: { display: false }, border: { display: false }, ticks: { color: C.text, callback(v) { return truncar(this.getLabelForValue(v), 28); } } },
       },
+    },
+  });  
+}
+
+function renderGrouped(id, labels, series, decimals = 0) {
+  const max = Math.max(...series.flatMap((s) => s.data), 0);
+  mount(id, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: series.map((s) => ({
+        label: s.label, data: s.data, backgroundColor: s.color,
+        borderRadius: { topLeft: 6, topRight: 6 }, borderSkipped: false, maxBarThickness: 34,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, layout: { padding: { top: 12 } },
+      plugins: {
+        legend: { display: true, position: "bottom", labels: { color: C.dim, usePointStyle: true, pointStyle: "circle", boxWidth: 8, padding: 14 } },
+        tooltip: tooltipStyle(),
+        datalabels: { ...labelBase, display: labels.length * series.length <= 20, anchor: "end", align: "end", offset: 2, formatter: (v) => fmt(v, decimals) },
+      },
+      scales: { x: scaleX(), y: scaleY(max * 1.2) },
     },
   });
 }
@@ -375,8 +400,60 @@ function construirLayoutInterno() {
       <select id="fHorasTrabajador" class="filter-select"><option value="">Trabajador</option></select></div>
     <button id="clearHoras" class="btn-clear-chips"><i class="fas fa-eraser"></i> Limpiar</button>`;
   $("gridHoras").innerHTML = [
-    plotCard("hTrabajador", "Horas extra por trabajador", "Top trabajadores con más horas extra", 8, "tall"),
-    slotCard("hTablaMov", "Detalle de movimientos", "Registros de horas extra", 12),
+    plotCard("hTrabajador", "Horas extra por trabajador", "Top trabajadores con más horas extra", 6, "tall"),
+    slotCard("hTablaMov", "Detalle de movimientos", "Registros de horas extra", 6),
+  ].join("");
+
+    // Facturación - Pedidos
+  $("filtersPed").innerHTML = `
+    <div class="filter-chip"><i class="fas fa-map-marker-alt"></i>
+      <select id="fPedZona" class="filter-select"><option value="">Zona</option></select></div>
+    <div class="filter-chip"><i class="fas fa-calendar"></i>
+      <input type="date" id="fPedFecha" class="filter-select" style="min-width:150px;"></div>
+    <button id="clearPed" class="btn-clear-chips"><i class="fas fa-eraser"></i> Limpiar</button>`;
+      $("gridPed").innerHTML = [
+    plotCard("fpFecha", "Cantidad de pedidos por fecha", "Evolución diaria de pedidos", 6, "tall"),
+    plotCard("fpZona", "Valor Neto Factura por zona", "Top zonas de venta", 6, "tall"),
+    slotCard("fpTabla", "Detalle de pedidos", "Zona · Pagador · Valores", 12),
+  ].join("");
+
+  // Facturación - PLU
+  $("filtersPLU").innerHTML = `
+    <div class="filter-chip"><i class="fas fa-tags"></i>
+      <select id="fPluJerarquia" class="filter-select"><option value="">Jerarquía</option></select></div>
+    <div class="filter-chip"><i class="fas fa-calendar"></i>
+      <input type="date" id="fPluFecha" class="filter-select" style="min-width:150px;"></div>
+    <button id="clearPLU" class="btn-clear-chips"><i class="fas fa-eraser"></i> Limpiar</button>`;
+    $("gridPLU").innerHTML = [
+    plotCard("fplJerarquia", "Valor Neto Pedido por jerarquía", "Categorías del producto", 6, "tall"),
+    slotCard("fplTabla", "Detalle por jerarquía", "Jerarquía · Valor · Cantidad", 6),
+  ].join("");
+
+    // Recepción - Packing
+    $("filtersPack").innerHTML = `
+    <div class="filter-chip"><i class="fas fa-tags"></i>
+      <select id="fPackCampana" class="filter-select"><option value="">Campaña</option></select></div>
+    <div class="filter-chip"><i class="fas fa-calendar"></i>
+      <input type="date" id="fPackFecha" class="filter-select" style="min-width:150px;"></div>
+    <button id="clearPack" class="btn-clear-chips"><i class="fas fa-eraser"></i> Limpiar</button>`;
+  $("gridPack").innerHTML = [
+    plotCard("rpMes", "Cantidad importada por mes", "Suma de CANT por mes", 6, "tall"),
+    donutCard("rpCampana", "Cantidad por campaña", "Distribución entre campañas", 6),
+    slotCard("rpTabla", "Detalle de packing list", "PLU · Material · Caja · Campaña · Cantidad", 12),
+  ].join("");
+
+  // Recepción - Detalle
+  $("filtersDet").innerHTML = `
+    <div class="filter-chip"><i class="fas fa-truck"></i>
+      <select id="fDetProveedor" class="filter-select"><option value="">Proveedor</option></select></div>
+    <div class="filter-chip"><i class="fas fa-clipboard-check"></i>
+      <select id="fDetEstado" class="filter-select"><option value="">Estado</option></select></div>
+    <div class="filter-chip"><i class="fas fa-calendar"></i>
+      <input type="date" id="fDetFecha" class="filter-select" style="min-width:150px;"></div>
+    <button id="clearDet" class="btn-clear-chips"><i class="fas fa-eraser"></i> Limpiar</button>`;
+  $("gridDet").innerHTML = [
+    plotCard("rdMes", "Ingresado vs Pendiente por mes", "Comparativo mensual", 12, "tall"),
+    slotCard("rdTabla", "Detalle por PLU", "Material · Talla · Proveedor · Estado · Ingresado · Pendiente", 12),
   ].join("");
 }
 
@@ -418,6 +495,24 @@ function llenarSegmentadores() {
   if (state.horasExtra) {
     const trab = [...new Set(state.horasExtra.filas.map(f => f.nombre))].sort();
     llenarSelect("fHorasTrabajador", trab, "Trabajador");
+  }
+    if (state.factPedido) {
+    const zonas = [...new Set(state.factPedido.filas.map(f => f.zona))].sort();
+    llenarSelect("fPedZona", zonas, "Zona");
+  }
+  if (state.factPLU) {
+    const jer = [...new Set(state.factPLU.filas.map(f => f.jerarquia))].sort();
+    llenarSelect("fPluJerarquia", jer, "Jerarquía");
+  }
+        if (state.recepPacking) {
+    const camps = state.recepPacking.porCampana.map(c => c.campana).sort();
+    llenarSelect("fPackCampana", camps, "Campaña");
+  }
+  if (state.recepDetalle) {
+    const provs = [...new Set(state.recepDetalle.porDetalle.map(f => f.proveedor).filter(Boolean))].sort();
+    llenarSelect("fDetProveedor", provs, "Proveedor");
+    const ests = [...new Set(state.recepDetalle.porDetalle.map(f => f.estado).filter(Boolean))].sort();
+    llenarSelect("fDetEstado", ests, "Estado");
   }
 }
 
@@ -805,6 +900,239 @@ function renderHorasExtra() {
     : `<div class="plot-empty" style="display:flex;position:static;min-height:120px"><i class="fas fa-chart-simple"></i><span>Sin datos</span></div>`;
 }
 
+/* ---------- SUB-FACT PEDIDO ---------- */
+function renderFactPedido() {
+  if (!state.factPedido) { $("gridPed").innerHTML = vacioMensaje(12); $("kpiPed").innerHTML = ""; return; }
+  const fZona = filtroActivo("fPedZona");
+  const fFecha = filtroActivo("fPedFecha");
+
+  const filas = state.factPedido.filas.filter(f => {
+    if (fZona && f.zona !== fZona) return false;
+    if (fFecha && f.fecha !== fFecha) return false;
+    return true;
+  });
+
+  let totValNetoPed = 0, totValNetoFact = 0, totCantPed = 0, totCantEnt = 0;
+  const setPedidos = new Set();
+  const porZona = {};
+  filas.forEach(f => {
+    totValNetoPed += f.valNetoPed;
+    totValNetoFact += f.valNetoFact;
+    totCantPed += f.cantPed;
+    totCantEnt += f.cantEnt;
+    setPedidos.add(f.pedido);
+    porZona[f.zona] = (porZona[f.zona] || 0) + f.valNetoFact;
+  });
+  const ticketProm = setPedidos.size ? totValNetoPed / setPedidos.size : 0;
+
+  $("kpiPed").innerHTML = [
+    heroCard({
+      title: "Total Valor Neto Pedido", value: "S/ " + fmt(totValNetoPed, 2), unit: "",
+      note: `${fmt(setPedidos.size)} pedidos · ${fmt(filas.length)} líneas`,
+      badge: `Ticket prom: S/ ${fmt(ticketProm, 2)}`,
+    }),
+    kpiCard({ icon: "fa-file-invoice-dollar", tone: "gold", title: "Total Valor Neto Factura", value: "S/ " + fmt(totValNetoFact, 2), unit: "",
+      pct: totValNetoPed ? (totValNetoFact / totValNetoPed) * 100 : 0, barLabel: "Sobre el pedido",
+      foot: `Facturado del pedido` }),
+    kpiCard({ icon: "fa-shopping-cart", tone: "amber", title: "Total pedidos", value: fmt(setPedidos.size), unit: "",
+      pct: 100, barLabel: "Distintos",
+      foot: `${fmt(filas.length)} líneas` }),
+    kpiCard({ icon: "fa-cubes", tone: "green", title: "Cantidad pedido", value: fmt(totCantPed), unit: "",
+      pct: totCantPed ? (totCantEnt / totCantPed) * 100 : 0, barLabel: "Entregado",
+      foot: `${fmt(totCantEnt)} entregado` }),
+  ].join("");
+
+    // Cantidad de pedidos por fecha (únicos)
+  const porFecha = {};
+  filas.forEach(f => {
+    if (!f.fecha) return;
+    if (!porFecha[f.fecha]) porFecha[f.fecha] = { fecha: f.fecha, fechaEt: f.fechaEt, pedidos: new Set() };
+    porFecha[f.fecha].pedidos.add(f.pedido);
+  });
+  const fechasArr = Object.values(porFecha).sort((a, b) => a.fecha.localeCompare(b.fecha)).slice(-30);
+  renderArea("fpFecha", fechasArr.map(f => f.fechaEt), [
+    { label: "Pedidos", color: C.gold, data: fechasArr.map(f => f.pedidos.size) },
+  ], { decimals: 0 });
+
+    const zonaArr = Object.entries(porZona).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  renderHBar("fpZona", zonaArr.map(z => truncar(z[0], 22)), zonaArr.map(z => round(z[1], 2)), C.goldDark, C.goldLight, 2);
+
+  const top = filas.sort((a, b) => b.valNetoFact - a.valNetoFact).slice(0, 30);
+  $("fpTabla").innerHTML = top.length
+    ? tabla(
+        [{ t: "Pedido" }, { t: "Fecha" }, { t: "Zona" }, { t: "Pagador" }, { t: "V.Neto Ped.", num: 1 }, { t: "V.Neto Fact.", num: 1 }],
+        top.map(f => [f.pedido, f.fechaEt, truncar(f.zona, 18), truncar(f.nombrePag, 26), fmt(f.valNetoPed, 2), fmt(f.valNetoFact, 2)])
+      )
+    : `<div class="plot-empty" style="display:flex;position:static;min-height:120px"><i class="fas fa-chart-simple"></i><span>Sin datos</span></div>`;
+}
+
+/* ---------- SUB-FACT PLU ---------- */
+function renderFactPLU() {
+  if (!state.factPLU) { $("gridPLU").innerHTML = vacioMensaje(12); $("kpiPLU").innerHTML = ""; return; }
+  const fJer = filtroActivo("fPluJerarquia");
+  const fFecha = filtroActivo("fPluFecha");
+
+  const filas = state.factPLU.filas.filter(f => {
+    if (fJer && f.jerarquia !== fJer) return false;
+    if (fFecha && f.fecha !== fFecha) return false;
+    return true;
+  });
+
+  let totValNeto = 0, totCantPed = 0, totCantEnt = 0;
+  const porJer = {};
+  const setPedidos = new Set();
+  filas.forEach(f => {
+    totValNeto += f.valNeto;
+    totCantPed += f.cantPed;
+    totCantEnt += f.cantEnt;
+    setPedidos.add(f.pedido);
+    porJer[f.jerarquia] = (porJer[f.jerarquia] || 0) + f.valNeto;
+  });
+
+  $("kpiPLU").innerHTML = [
+    heroCard({
+      title: "Total Valor Neto Pedido", value: "S/ " + fmt(totValNeto, 2), unit: "",
+      note: `${fmt(filas.length)} líneas · ${fmt(setPedidos.size)} pedidos`,
+      badge: `${fmt(Object.keys(porJer).length)} jerarquías`,
+    }),
+    kpiCard({ icon: "fa-cubes", tone: "gold", title: "Total cantidad pedido", value: fmt(totCantPed), unit: "",
+      pct: 100, barLabel: "Total",
+      foot: `Unidades pedidas` }),
+    kpiCard({ icon: "fa-check", tone: "amber", title: "Total cantidad entrega", value: fmt(totCantEnt), unit: "",
+      pct: totCantPed ? (totCantEnt / totCantPed) * 100 : 0, barLabel: "Sobre lo pedido",
+      foot: `Unidades entregadas` }),
+    kpiCard({ icon: "fa-list", tone: "green", title: "Jerarquías", value: fmt(Object.keys(porJer).length), unit: "",
+      pct: 100, barLabel: "Distintas",
+      foot: `Categorías de producto` }),
+  ].join("");
+
+  const jerArr = Object.entries(porJer).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  renderScrollHBar("fplJerarquia", jerArr.map(j => truncar(j[0], 22)), jerArr.map(j => round(j[1], 2)), C.goldDark, C.goldLight, 2);
+
+  const top = filas.sort((a, b) => b.valNeto - a.valNeto).slice(0, 30);
+  $("fplTabla").innerHTML = top.length
+    ? tabla(
+        [{ t: "Jerarquía" }, { t: "Pedido" }, { t: "Fecha" }, { t: "Cant. pedido", num: 1 }, { t: "Cant. entrega", num: 1 }, { t: "V.Neto", num: 1 }],
+        top.map(f => [truncar(f.jerarquia, 22), f.pedido, f.fechaEt, fmt(f.cantPed), fmt(f.cantEnt), fmt(f.valNeto, 2)])
+      )
+    : `<div class="plot-empty" style="display:flex;position:static;min-height:120px"><i class="fas fa-chart-simple"></i><span>Sin datos</span></div>`;
+}
+
+/* ---------- SUB-RECEP PACKING ---------- */
+function renderRecepPacking() {
+  if (!state.recepPacking) { $("gridPack").innerHTML = vacioMensaje(12); $("kpiPack").innerHTML = ""; return; }
+  const fCamp = filtroActivo("fPackCampana");
+  const fFecha = filtroActivo("fPackFecha");
+
+  const d = state.recepPacking;
+
+  let porDescripcion = d.porDescripcion;
+  if (fFecha) {
+    porDescripcion = porDescripcion.filter(x => x.fechas && x.fechas.includes(fFecha));
+  }
+
+  let porCampana = d.porCampana;
+  if (fCamp) {
+    porCampana = porCampana.filter(c => c.campana === fCamp);
+  }
+
+  const totCant = porDescripcion.reduce((a, x) => a + x.cant, 0) || d.kpis.totalCantidad;
+
+  $("kpiPack").innerHTML = [
+    heroCard({
+      title: "Total cantidad importada", value: fmt(totCant), unit: "unid.",
+      note: `${fmt(d.kpis.totalRegistros)} registros · ${fmt(d.kpis.totalCajas)} cajas`,
+      badge: `${fmt(d.kpis.totalImportaciones)} importaciones`,
+    }),
+    kpiCard({ icon: "fa-boxes-packing", tone: "gold", title: "Total cajas importadas", value: fmt(d.kpis.totalCajas), unit: "",
+      pct: 100, barLabel: "Distintas",
+      foot: `${fmt(d.kpis.totalRegistros)} registros` }),
+    kpiCard({ icon: "fa-calendar", tone: "amber", title: "Meses activos", value: fmt(d.porMes.length), unit: "",
+      pct: 100, barLabel: "Distintos",
+      foot: `Con importaciones` }),
+    kpiCard({ icon: "fa-flag", tone: "green", title: "Campañas", value: fmt(d.porCampana.length), unit: "",
+      pct: 100, barLabel: "Distintas",
+      foot: `En el packing` }),
+  ].join("");
+
+  const mesesMap = { ENERO:1, FEBRERO:2, MARZO:3, ABRIL:4, MAYO:5, JUNIO:6, JULIO:7, AGOSTO:8, SEPTIEMBRE:9, SETIEMBRE:9, OCTUBRE:10, NOVIEMBRE:11, DICIEMBRE:12 };
+const mesesArr = d.porMes.slice().sort((a, b) => (mesesMap[a.mes.toUpperCase()] || 99) - (mesesMap[b.mes.toUpperCase()] || 99));
+  renderColumns("rpMes", mesesArr.map(m => m.mes), mesesArr.map(m => round(m.cant)), C.goldLight, C.goldDark, 0);
+
+  const campArr = porCampana.slice().sort((a, b) => b.cant - a.cant);
+  const top6 = campArr.slice(0, 6);
+  const otros = campArr.slice(6).reduce((a, e) => a + e.cant, 0);
+  const cd = top6.map(c => c.cant); const cl = top6.map(c => c.campana);
+  if (otros > 0) { cd.push(otros); cl.push("Otros"); }
+  renderDoughnut("rpCampana", cl, cd, fmt(totCant), "unidades");
+
+  const top = porDescripcion.slice(0, 50);
+  $("rpTabla").innerHTML = top.length
+    ? tabla(
+        [{ t: "Descripción" }, { t: "Cantidad", num: 1 }, { t: "Importaciones", num: 1 }],
+        top.map(f => [truncar(f.desc, 45), fmt(f.cant), fmt(f.importaciones)])
+      )
+    : `<div class="plot-empty" style="display:flex;position:static;min-height:120px"><i class="fas fa-chart-simple"></i><span>Sin datos</span></div>`;
+}
+
+/* ---------- SUB-RECEP DETALLE ---------- */
+function renderRecepDetalle() {
+  if (!state.recepDetalle) { $("gridDet").innerHTML = vacioMensaje(12); $("kpiDet").innerHTML = ""; return; }
+  const fProv = filtroActivo("fDetProveedor");
+  const fEstado = filtroActivo("fDetEstado");
+  const fFecha = filtroActivo("fDetFecha");
+
+  const d = state.recepDetalle;
+  let porDetalle = d.porDetalle;
+  if (fProv || fEstado || fFecha) {
+    porDetalle = porDetalle.filter(x => {
+      if (fProv && x.proveedor !== fProv) return false;
+      if (fEstado && x.estado !== fEstado) return false;
+      if (fFecha && !(x.fechas && x.fechas.includes(fFecha))) return false;
+      return true;
+    });
+  }
+
+  const totCant = porDetalle.reduce((a, x) => a + x.cantidad, 0);
+  const totIng = porDetalle.reduce((a, x) => a + x.ingresado, 0);
+  const totPend = porDetalle.reduce((a, x) => a + x.pendiente, 0);
+  const setProv = new Set(porDetalle.map(x => x.proveedor).filter(Boolean));
+  const pct = totCant ? (totIng / totCant) * 100 : 0;
+
+  $("kpiDet").innerHTML = [
+    heroCard({
+      title: "Total cantidad ingresada", value: fmt(totIng), unit: "unid.",
+      note: `${fmt(totCant)} unidades totales`,
+      badge: `${pct.toFixed(1)}% de ingreso`,
+    }),
+    kpiCard({ icon: "fa-clipboard-check", tone: "gold", title: "Cantidad pendiente", value: fmt(totPend), unit: "unid.",
+      pct: totCant ? (totPend / totCant) * 100 : 0, barLabel: "Por ingresar",
+      foot: `De ${fmt(totCant)} unidades` }),
+    kpiCard({ icon: "fa-percent", tone: "amber", title: "% de ingreso", value: pct.toFixed(1) + "%", unit: "",
+      pct: pct, barLabel: "Ingresado / total",
+      foot: `${fmt(totIng)} de ${fmt(totCant)}` }),
+    kpiCard({ icon: "fa-truck", tone: "green", title: "Proveedores", value: fmt(setProv.size), unit: "",
+      pct: 100, barLabel: "Distintos",
+      foot: `En la producción` }),
+  ].join("");
+
+  const ordenMeses = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
+  const mesesMap = { ENERO:1, FEBRERO:2, MARZO:3, ABRIL:4, MAYO:5, JUNIO:6, JULIO:7, AGOSTO:8, SEPTIEMBRE:9, SETIEMBRE:9, OCTUBRE:10, NOVIEMBRE:11, DICIEMBRE:12 };
+const mesesArr = d.porMes.slice().sort((a, b) => (mesesMap[a.mes.toUpperCase()] || 99) - (mesesMap[b.mes.toUpperCase()] || 99));
+  renderGrouped("rdMes", mesesArr.map(m => m.mes), [
+    { label: "Ingresado", color: C.gold, data: mesesArr.map(m => round(m.ingresado)) },
+    { label: "Pendiente", color: C.orange, data: mesesArr.map(m => round(m.pendiente)) },
+  ]);
+
+  const top = porDetalle.slice(0, 30);
+  $("rdTabla").innerHTML = top.length
+    ? tabla(
+        [{ t: "Material" }, { t: "PLU" }, { t: "Talla" }, { t: "Proveedor" }, { t: "Estado" }, { t: "Cantidad", num: 1 }, { t: "Ingresado", num: 1 }, { t: "Pendiente", num: 1 }],
+        top.map(f => [f.material, f.plu, f.talla, truncar(f.proveedor, 24), f.estado, fmt(f.cantidad), fmt(f.ingresado), fmt(f.pendiente)])
+      )
+    : `<div class="plot-empty" style="display:flex;position:static;min-height:120px"><i class="fas fa-chart-simple"></i><span>Sin datos</span></div>`;
+}
+
 /* ---------- Navegación ---------- */
 function cambiarSub(sub) {
   subActual = sub;
@@ -830,6 +1158,30 @@ function cambiarSubA(sub) {
   else if (sub === "horasextra") renderHorasExtra();
   requestAnimationFrame(() => Object.values(charts).forEach((c) => c.resize()));
 }
+
+function cambiarSubF(sub) {
+  subActualF = sub;
+  document.querySelectorAll("#subTabsF .subtab").forEach(t => t.classList.toggle("active", t.dataset.sub === sub));
+  ["pedido", "plu"].forEach(s => {
+    const el = document.getElementById("subF-" + s);
+    if (el) el.style.display = s === sub ? "block" : "none";
+  });
+  if (sub === "pedido") renderFactPedido();
+  else if (sub === "plu") renderFactPLU();
+  requestAnimationFrame(() => Object.values(charts).forEach(c => c.resize()));
+}
+
+function cambiarSubR(sub) {
+  subActualR = sub;
+  document.querySelectorAll("#subTabsR .subtab").forEach(t => t.classList.toggle("active", t.dataset.sub === sub));
+  ["packing", "detalle"].forEach(s => {
+    const el = document.getElementById("subR-" + s);
+    if (el) el.style.display = s === sub ? "block" : "none";
+  });
+  if (sub === "packing") renderRecepPacking();
+  else if (sub === "detalle") renderRecepDetalle();
+  requestAnimationFrame(() => Object.values(charts).forEach(c => c.resize()));
+}
 function cambiarSeccion(seccion) {
   document.querySelectorAll("#dashTabs .tab").forEach((t) => {
     if (t.classList.contains("is-disabled")) return;
@@ -841,6 +1193,8 @@ function cambiarSeccion(seccion) {
   });
   if (seccion === "almacen") cambiarSub(subActual);
   if (seccion === "asistencia") cambiarSubA(subActualA);
+    if (seccion === "facturacion") cambiarSubF(subActualF);
+      if (seccion === "recepcion") cambiarSubR(subActualR);
 }
 
 /* ---------- Eventos ---------- */
@@ -898,29 +1252,70 @@ function engancharEventos() {
       document.querySelectorAll(".js-refresh").forEach((x) => { x.disabled = false; x.classList.remove("is-loading"); });
     })
   );
+
+    document.querySelectorAll("#subTabsF .subtab").forEach(t => {
+    t.addEventListener("click", () => cambiarSubF(t.dataset.sub));
+  });
+  ["fPedZona","fPedFecha","fPluJerarquia","fPluFecha"].forEach(id => {
+    const el = $(id); if (el) el.addEventListener("change", () => cambiarSubF(subActualF));
+  });
+  ["clearPed","clearPLU"].forEach(id => {
+    const btn = $(id);
+    if (btn) btn.addEventListener("click", () => {
+      ["fPedZona","fPedFecha","fPluJerarquia","fPluFecha"].forEach(x => {
+        const el = $(x); if (el) el.value = "";
+      });
+      cambiarSubF(subActualF);
+    });
+  });
+      document.querySelectorAll("#subTabsR .subtab").forEach(t => {
+    t.addEventListener("click", () => cambiarSubR(t.dataset.sub));
+  });
+  ["fPackCampana","fPackFecha","fDetProveedor","fDetEstado","fDetFecha"].forEach(id => {
+    const el = $(id); if (el) el.addEventListener("change", () => cambiarSubR(subActualR));
+  });
+  ["clearPack","clearDet"].forEach(id => {
+    const btn = $(id);
+    if (btn) btn.addEventListener("click", () => {
+      ["fPackCampana","fPackFecha","fDetProveedor","fDetEstado","fDetFecha"].forEach(x => {
+        const el = $(x); if (el) el.value = "";
+      });
+      cambiarSubR(subActualR);
+    });
+  });
 }
 
 /* ---------- Carga completa ---------- */
 async function cargarTodo() {
-  const [mb52, lt22, zlx12, zwm, asistencia, horasExtra] = await Promise.all([
+  const [mb52, lt22, zlx12, zwm, asistencia, horasExtra, factPedido, factPLU, recepPacking, recepDetalle] = await Promise.all([
     cargarHoja("ALM_MB52").catch(() => null),
     cargarHoja("ALM_LT22").catch(() => null),
     cargarHoja("ALM_ZLX12").catch(() => null),
     cargarHoja("ALM_ZWM").catch(() => null),
     cargarHoja("ASIS_ASISTENCIA").catch(() => null),
     cargarHoja("ASIS_HORAS_EXTRA").catch(() => null),
+    cargarHoja("FACT_PEDIDO").catch(() => null),
+    cargarHoja("FACT_PLU").catch(() => null),
+    cargarHoja("RECEP_PACKING").catch(() => null),
+    cargarHoja("RECEP_DETALLE").catch(() => null),
   ]);
   state.mb52 = mb52; state.lt22 = lt22; state.zlx12 = zlx12; state.zwm = zwm;
   state.asistencia = asistencia; state.horasExtra = horasExtra;
+  state.factPedido = factPedido; state.factPLU = factPLU;
+  state.recepPacking = recepPacking; state.recepDetalle = recepDetalle;
 
-  const count = [mb52, lt22, zlx12, zwm, asistencia, horasExtra].filter(Boolean).length;
-  $("stRegistros").textContent = `${count} / 6`;
+    const count = [mb52, lt22, zlx12, zwm, asistencia, horasExtra, factPedido, factPLU, recepPacking, recepDetalle].filter(Boolean).length;
+  $("stRegistros").textContent = `${count} / 10`;
   $("stSync").textContent = new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
 
   const totalReg = (mb52?.filas?.length || 0) + (lt22?.filas?.length || 0) +
                    (zlx12?.filas?.length || 0) + (state.zwm?.kpis?.totalRegistros || 0) +
                    (state.asistencia?.kpis?.totalRegistros || 0) +
-                   (state.horasExtra?.kpis?.totalRegistros || 0);
+                   (state.horasExtra?.kpis?.totalRegistros || 0) +
+                   (state.factPedido?.kpis?.totalRegistros || 0) +
+                   (state.factPLU?.kpis?.totalRegistros || 0) +
+                   (state.recepPacking?.kpis?.totalRegistros || 0) +
+                   (state.recepDetalle?.kpis?.totalRegistros || 0);
   $("chipRegistros").textContent = fmt(totalReg);
   $("chipSync").textContent = new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
 

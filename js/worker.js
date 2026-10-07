@@ -8,12 +8,16 @@ self.onmessage = function (e) {
   const { tipo, rows } = e.data;
   try {
     let resultado;
-    if (tipo === "MB52") resultado = procesarMB52(rows);
-    else if (tipo === "LT22") resultado = procesarLT22(rows);
-    else if (tipo === "ZLX12") resultado = procesarZLX12(rows);
-    else if (tipo === "ZWM") resultado = procesarZWM(rows);
-    else if (tipo === "ASISTENCIA") resultado = procesarAsistencia(rows);
-    else if (tipo === "HORAS_EXTRA") resultado = procesarHorasExtra(rows);
+        if (tipo === "MB52" || tipo === "ALM_MB52") resultado = procesarMB52(rows);
+    else if (tipo === "LT22" || tipo === "ALM_LT22") resultado = procesarLT22(rows);
+    else if (tipo === "ZLX12" || tipo === "ALM_ZLX12") resultado = procesarZLX12(rows);
+    else if (tipo === "ZWM" || tipo === "ALM_ZWM") resultado = procesarZWM(rows);
+    else if (tipo === "ASISTENCIA" || tipo === "ASIS_ASISTENCIA") resultado = procesarAsistencia(rows);
+    else if (tipo === "HORAS_EXTRA" || tipo === "ASIS_HORAS_EXTRA") resultado = procesarHorasExtra(rows);
+    else if (tipo === "PEDIDO" || tipo === "FACT_PEDIDO") resultado = procesarFactPedido(rows);
+    else if (tipo === "PLU" || tipo === "FACT_PLU") resultado = procesarFactPLU(rows);
+    else if (tipo === "PACKING_2026" || tipo === "RECEP_PACKING") resultado = procesarRecepPacking(rows);
+    else if (tipo === "DETALLE_POR_PLU" || tipo === "RECEP_DETALLE") resultado = procesarRecepDetalle(rows);
     else throw new Error("Tipo desconocido: " + tipo);
     self.postMessage({ ok: true, tipo, resultado });
   } catch (err) {
@@ -460,5 +464,307 @@ function procesarHorasExtra(rows) {
     kpis: { totalRegistros: filas.length, totalTrabajadores: setTrab.size, totalHoras, totalNormales, totalAdicionales },
     porTrabajador: Object.values(porTrab).sort((a, b) => b.horas - a.horas),
     filas,
+  };
+}
+
+/* ---------- FACTURACIÓN: PEDIDO ---------- */
+function procesarFactPedido(rows) {
+  let headerIndex = 0;
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const f = rows[i].map(c => (c || "").toString().trim().toLowerCase());
+    if (f.includes("nº de pedido") || f.includes("n° de pedido")) { headerIndex = i; break; }
+  }
+  const headers = rows[headerIndex].map((h, i) => (h || "").toString().trim() || `Columna_${i + 1}`);
+
+  const cPedido = headers.findIndex(h => h.toLowerCase().includes("pedido") && h.toLowerCase().includes("n"));
+  const cFechaPedido = headers.findIndex(h => h.toLowerCase().includes("fecha cr. pedido"));
+  const cZona = headers.findIndex(h => h.toLowerCase().includes("denomin.zona"));
+  const cValBruto = headers.findIndex(h => h.toLowerCase().includes("valor bruto pedido"));
+  const cImpPedido = headers.findIndex(h => h.toLowerCase().includes("impuesto pedido"));
+  const cValNetoPed = headers.findIndex(h => h.toLowerCase().includes("valor neto pedido"));
+  const cValBrutoFact = headers.findIndex(h => h.toLowerCase().includes("valor bruto fact"));
+  const cImpFact = headers.findIndex(h => h.toLowerCase().includes("impuesto factura"));
+  const cValNetoFact = headers.findIndex(h => h.toLowerCase().includes("valor neto factura"));
+  const cCantPedido = headers.findIndex(h => h.toLowerCase().includes("cantidad de pedido"));
+  const cCantPend = headers.findIndex(h => h.toLowerCase().includes("cantidad pendiente"));
+  const cCantConf = headers.findIndex(h => h.toLowerCase().includes("cantidad-acum-confir"));
+  const cCantEntrega = headers.findIndex(h => h.toLowerCase().includes("cantidad entrega"));
+  const cPagador = headers.findIndex(h => h.toLowerCase() === "pagador");
+  const cNombrePag = headers.findIndex(h => h.toLowerCase().includes("nombre pagador"));
+  const cPoblacion = headers.findIndex(h => h.toLowerCase() === "población");
+
+  const filas = [];
+  const setPedidos = new Set();
+  let totValNetoPed = 0, totValNetoFact = 0, totValBrutoPed = 0, totValBrutoFact = 0;
+  let totCantPed = 0, totCantConf = 0, totCantPend = 0, totCantEnt = 0;
+  const porZona = {};
+
+  for (let i = headerIndex + 1; i < rows.length; i++) {
+    const r = rows[i]; if (!r) continue;
+    const pedido = norm(r[cPedido]); if (!pedido) continue;
+
+    const fecha = fechaOrdenable(r[cFechaPedido]);
+    const fechaEt = formatearFecha(r[cFechaPedido]);
+    const zona = norm(r[cZona]) || "Sin zona";
+    const valNetoPed = num(r[cValNetoPed]);
+    const valNetoFact = num(r[cValNetoFact]);
+    const valBrutoPed = num(r[cValBruto]);
+    const valBrutoFact = num(r[cValBrutoFact]);
+    const impPedido = num(r[cImpPedido]);
+    const impFact = num(r[cImpFact]);
+    const cantPed = num(r[cCantPedido]);
+    const cantConf = num(r[cCantConf]);
+    const cantPend = num(r[cCantPend]);
+    const cantEnt = num(r[cCantEntrega]);
+    const pagador = norm(r[cPagador]);
+    const nombrePag = norm(r[cNombrePag]);
+    const poblacion = norm(r[cPoblacion]);
+
+    totValNetoPed += valNetoPed;
+    totValNetoFact += valNetoFact;
+    totValBrutoPed += valBrutoPed;
+    totValBrutoFact += valBrutoFact;
+    totCantPed += cantPed;
+    totCantConf += cantConf;
+    totCantPend += cantPend;
+    totCantEnt += cantEnt;
+    setPedidos.add(pedido);
+
+    if (!porZona[zona]) porZona[zona] = { zona, valNetoFact: 0, valNetoPed: 0, pedidos: 0 };
+    porZona[zona].valNetoFact += valNetoFact;
+    porZona[zona].valNetoPed += valNetoPed;
+    porZona[zona].pedidos++;
+
+    filas.push({
+      pedido, fecha, fechaEt, zona,
+      valNetoPed, valNetoFact, valBrutoPed, valBrutoFact, impPedido, impFact,
+      cantPed, cantConf, cantPend, cantEnt,
+      pagador, nombrePag, poblacion,
+    });
+  }
+
+  return {
+    tipo: "FACT_PEDIDO",
+    kpis: {
+      totalPedidos: setPedidos.size,
+      totalRegistros: filas.length,
+            totValNetoPed, totValNetoFact, totValBrutoPed, totValBrutoFact,
+      totCantPed, totCantConf, totCantPend, totCantEnt,
+    },
+    porZona: Object.values(porZona).sort((a, b) => b.valNetoFact - a.valNetoFact),
+    filas,
+  };
+}
+
+/* ---------- FACTURACIÓN: PLU ---------- */
+function procesarFactPLU(rows) {
+  let headerIndex = 0;
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const f = rows[i].map(c => (c || "").toString().trim().toLowerCase());
+    if (f.includes("jerarquía del producto") || f.includes("jerarquia del producto")) { headerIndex = i; break; }
+  }
+  const headers = rows[headerIndex].map((h, i) => (h || "").toString().trim() || `Columna_${i + 1}`);
+
+  const cFecha = headers.findIndex(h => h.toLowerCase().includes("fecha cr. pedido"));
+  const cJerarquia = headers.findIndex(h => h.toLowerCase().includes("jerarquía") || h.toLowerCase().includes("jerarquia"));
+  const cPedido = headers.findIndex(h => h.toLowerCase().includes("nº de pedido") || h.toLowerCase().includes("n° de pedido"));
+  const cValNeto = headers.findIndex(h => h.toLowerCase().includes("valor neto pedido"));
+  const cCantPed = headers.findIndex(h => h.toLowerCase().includes("cantidad de pedido"));
+  const cCantConf = headers.findIndex(h => h.toLowerCase().includes("cantidad-acum-confir"));
+  const cCantPend = headers.findIndex(h => h.toLowerCase().includes("cantidad pendiente"));
+  const cCantEnt = headers.findIndex(h => h.toLowerCase().includes("cantidad entrega"));
+
+  const filas = [];
+  const porJerarquia = {};
+  let totValNeto = 0, totCantPed = 0, totCantEnt = 0, totCantConf = 0, totCantPend = 0;
+  const setPedidos = new Set();
+
+  for (let i = headerIndex + 1; i < rows.length; i++) {
+    const r = rows[i]; if (!r) continue;
+    const jerarquia = norm(r[cJerarquia]) || "Sin jerarquía";
+    const pedido = norm(r[cPedido]);
+    if (!pedido) continue;
+
+    const fecha = fechaOrdenable(r[cFecha]);
+    const fechaEt = formatearFecha(r[cFecha]);
+    const valNeto = num(r[cValNeto]);
+    const cantPed = num(r[cCantPed]);
+    const cantConf = num(r[cCantConf]);
+    const cantPend = num(r[cCantPend]);
+    const cantEnt = num(r[cCantEnt]);
+
+    totValNeto += valNeto;
+    totCantPed += cantPed;
+    totCantEnt += cantEnt;
+    totCantConf += cantConf;
+    totCantPend += cantPend;
+    setPedidos.add(pedido);
+
+    if (!porJerarquia[jerarquia]) porJerarquia[jerarquia] = { nombre: jerarquia, valNeto: 0, cantPed: 0, cantEnt: 0, registros: 0 };
+    porJerarquia[jerarquia].valNeto += valNeto;
+    porJerarquia[jerarquia].cantPed += cantPed;
+    porJerarquia[jerarquia].cantEnt += cantEnt;
+    porJerarquia[jerarquia].registros++;
+
+    filas.push({ jerarquia, pedido, fecha, fechaEt, valNeto, cantPed, cantConf, cantPend, cantEnt });
+  }
+
+  return {
+    tipo: "FACT_PLU",
+    kpis: {
+      totalRegistros: filas.length,
+      totalPedidos: setPedidos.size,
+            totValNeto, totCantPed, totCantEnt, totCantConf, totCantPend,
+    },
+    porJerarquia: Object.values(porJerarquia).sort((a, b) => b.valNeto - a.valNeto),
+    filas,
+  };
+}
+
+/* ---------- RECEPCIÓN: PACKING ---------- */
+function procesarRecepPacking(rows) {
+  let headerIndex = 0;
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const f = rows[i].map(c => (c || "").toString().trim().toLowerCase());
+    if (f.includes("plu") && f.includes("material")) { headerIndex = i; break; }
+  }
+  const headers = rows[headerIndex].map((h, i) => (h || "").toString().trim().replace(/<br\s*\/?>/gi, ' ').replace(/\s+/g, ' ').replace(/<br>/gi, '') || `Columna_${i + 1}`);
+
+  const cPLU = headers.findIndex(h => h.toLowerCase().trim() === "plu");
+  const cMaterial = headers.findIndex(h => h.toLowerCase().trim() === "material");
+  const cDesc = headers.findIndex(h => h.toLowerCase().includes("descripci"));
+  const cCant = headers.findIndex(h => h.toLowerCase().includes("cant"));
+  const cCaja = headers.findIndex(h => h.toLowerCase().includes("numero de caja") || h.toLowerCase().includes("número de caja"));
+  const cCampana = headers.findIndex(h => h.toLowerCase().includes("campa"));
+  const cFecha = headers.findIndex(h => h.toLowerCase().includes("fecha de recepcion") || h.toLowerCase().includes("fecha de recepción"));
+  const cSemana = headers.findIndex(h => h.toLowerCase().trim() === "semana");
+  const cMes = headers.findIndex(h => h.toLowerCase().trim() === "mes");
+  const cImportaciones = headers.findIndex(h => h.toLowerCase().includes("importaciones"));
+
+  let totalRegistros = 0;
+  const setCajas = new Set();
+  let totCant = 0, totImportaciones = 0;
+  const porMes = {}, porCampana = {}, porDesc = {};
+
+  for (let i = headerIndex + 1; i < rows.length; i++) {
+    const r = rows[i]; if (!r) continue;
+    const mat = norm(r[cMaterial]);
+    if (!mat) continue;
+
+    const cant = num(r[cCant]);
+    const caja = norm(r[cCaja]);
+    const campana = norm(r[cCampana]) || "Sin campaña";
+    const mes = norm(r[cMes]) || "Sin mes";
+    const desc = norm(r[cDesc]) || "Sin descripción";
+    const imp = num(r[cImportaciones]);
+    const fecha = fechaOrdenable(r[cFecha]);
+
+    totalRegistros++;
+    totCant += cant;
+    totImportaciones += imp;
+    if (caja) setCajas.add(caja);
+
+    if (!porMes[mes]) porMes[mes] = { mes, cant: 0, registros: 0 };
+    porMes[mes].cant += cant;
+    porMes[mes].registros++;
+
+    if (!porCampana[campana]) porCampana[campana] = { campana, cant: 0, registros: 0 };
+    porCampana[campana].cant += cant;
+    porCampana[campana].registros++;
+
+    if (!porDesc[desc]) porDesc[desc] = { desc, cant: 0, importaciones: 0, fechas: {} };
+    porDesc[desc].cant += cant;
+    porDesc[desc].importaciones += imp;
+    if (fecha) porDesc[desc].fechas[fecha] = true;
+  }
+
+  return {
+    tipo: "RECEP_PACKING",
+    kpis: {
+      totalRegistros,
+      totalCantidad: totCant,
+      totalCajas: setCajas.size,
+      totalImportaciones: totImportaciones,
+    },
+    porMes: Object.values(porMes).sort((a, b) => b.cant - a.cant),
+    porCampana: Object.values(porCampana).sort((a, b) => b.cant - a.cant),
+    porDescripcion: Object.values(porDesc)
+      .map(d => ({ desc: d.desc, cant: d.cant, importaciones: d.importaciones, fechas: Object.keys(d.fechas) }))
+      .sort((a, b) => b.cant - a.cant),
+  };
+}
+
+/* ---------- RECEPCIÓN: DETALLE POR PLU ---------- */
+function procesarRecepDetalle(rows) {
+  let headerIndex = 0;
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const f = rows[i].map(c => (c || "").toString().trim().toLowerCase());
+    if (f.includes("fecha") && f.includes("material") && f.includes("plu")) { headerIndex = i; break; }
+  }
+  const headers = rows[headerIndex].map((h, i) => (h || "").toString().trim() || `Columna_${i + 1}`);
+
+  const cFecha = headers.findIndex(h => h.toLowerCase().trim() === "fecha");
+  const cMaterial = headers.findIndex(h => h.toLowerCase().trim() === "material");
+  const cPLU = headers.findIndex(h => h.toLowerCase().trim() === "plu");
+  const cTalla = headers.findIndex(h => h.toLowerCase().trim() === "talla");
+  const cCant = headers.findIndex(h => h.toLowerCase().trim() === "cantidad");
+  const cProveedor = headers.findIndex(h => h.toLowerCase() === "proveedor");
+  const cIngresado = headers.findIndex(h => h.toLowerCase() === "ingresado");
+  const cPendiente = headers.findIndex(h => h.toLowerCase().includes("pendiente ingresar"));
+  const cEstado = headers.findIndex(h => h.toLowerCase() === "estado");
+  const cMes = headers.findIndex(h => h.toLowerCase().trim() === "mes");
+
+  const setProv = new Set();
+  let totIngresado = 0, totPendiente = 0, totCantidad = 0, totalRegistros = 0;
+  const porMes = {}, porDetalle = {};
+
+  for (let i = headerIndex + 1; i < rows.length; i++) {
+    const r = rows[i]; if (!r) continue;
+    const mat = norm(r[cMaterial]);
+    if (!mat) continue;
+
+    const cant = num(r[cCant]);
+    const ing = num(r[cIngresado]);
+    const pend = num(r[cPendiente]);
+    const mes = norm(r[cMes]) || "Sin mes";
+    const estado = norm(r[cEstado]);
+    const prov = norm(r[cProveedor]);
+    const plu = norm(r[cPLU]);
+    const talla = norm(r[cTalla]);
+    const fecha = fechaOrdenable(r[cFecha]);
+
+    totalRegistros++;
+    totCantidad += cant;
+    totIngresado += ing;
+    totPendiente += pend;
+    if (prov) setProv.add(prov);
+
+    if (!porMes[mes]) porMes[mes] = { mes, ingresado: 0, pendiente: 0, total: 0 };
+    porMes[mes].ingresado += ing;
+    porMes[mes].pendiente += pend;
+    porMes[mes].total += cant;
+
+    const key = `${mat}|${plu}|${talla}|${prov}|${estado}`;
+    if (!porDetalle[key]) porDetalle[key] = { material: mat, plu, talla, proveedor: prov, estado, cantidad: 0, ingresado: 0, pendiente: 0, fechas: {} };
+    porDetalle[key].cantidad += cant;
+    porDetalle[key].ingresado += ing;
+    porDetalle[key].pendiente += pend;
+    if (fecha) porDetalle[key].fechas[fecha] = true;
+  }
+
+  return {
+    tipo: "RECEP_DETALLE",
+    kpis: {
+      totalRegistros,
+      totCantidad,
+      totIngresado,
+      totPendiente,
+      totalProveedores: setProv.size,
+      pctIngreso: totCantidad ? (totIngresado / totCantidad) * 100 : 0,
+    },
+    porMes: Object.values(porMes).sort((a, b) => b.total - a.total),
+    porDetalle: Object.values(porDetalle)
+      .map(d => ({ ...d, fechas: Object.keys(d.fechas) }))
+      .sort((a, b) => b.cantidad - a.cantidad),
   };
 }

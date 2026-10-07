@@ -26,6 +26,10 @@ const HOJAS_VALIDAS = {
   "ZWM": "ALM_ZWM",
   "ASISTENCIA": "ASIS_ASISTENCIA",
   "HORAS_EXTRA": "ASIS_HORAS_EXTRA",
+  "PEDIDO": "FACT_PEDIDO",
+  "PLU": "FACT_PLU",
+  "PACKING_2026": "RECEP_PACKING",
+  "DETALLE_POR_PLU": "RECEP_DETALLE",
 };
 
 let resultadoPendiente = null;  // { sheetName, tipo, payload }

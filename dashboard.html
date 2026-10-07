@@ -47,8 +47,8 @@
             <nav class="tabs" id="dashTabs" aria-label="Secciones">
                 <a href="#" class="tab active" data-seccion="almacen"><i class="fas fa-warehouse"></i><span>Almacén</span></a>
                 <a href="#" class="tab" data-seccion="asistencia"><i class="fas fa-user-clock"></i><span>Asistencia</span></a>
-                <a href="#" class="tab is-disabled" data-seccion="facturacion"><i class="fas fa-file-invoice-dollar"></i><span>Facturación</span></a>
-                <a href="#" class="tab is-disabled" data-seccion="recepcion"><i class="fas fa-clipboard-check"></i><span>Recepción</span></a>
+                <a href="#" class="tab" data-seccion="facturacion"><i class="fas fa-file-invoice-dollar"></i><span>Facturación</span></a>
+                <a href="#" class="tab" data-seccion="recepcion"><i class="fas fa-clipboard-check"></i><span>Recepción</span></a>
             </nav>
             <p class="nav-label">Sistema y reportes</p>
             <div class="nav-actions">
@@ -134,19 +134,56 @@
     </div>
 </section>
             <section id="facturacion" class="dashboard-section" hidden>
-                <div class="card placeholder-card">
-                    <i class="fas fa-hourglass-half"></i>
-                    <h2>Facturación</h2>
-                    <p>Próximamente</p>
-                </div>
+    <div class="page-head">
+        <div>
+            <h1>Facturación</h1>
+            <p>Pedidos · PLU · Zonas</p>
+        </div>
+    </div>
+
+    <nav class="subtabs" id="subTabsF">
+        <button type="button" class="subtab active" data-sub="pedido"><i class="fas fa-file-invoice"></i> Pedidos</button>
+        <button type="button" class="subtab" data-sub="plu"><i class="fas fa-tags"></i> PLU</button>
+    </nav>
+
+    <div id="subF-pedido" class="subseccion">
+        <section class="filters-row" id="filtersPed"></section>
+        <section class="kpi-row" id="kpiPed"></section>
+        <section class="charts-exec" id="gridPed"></section>
+    </div>
+
+    <div id="subF-plu" class="subseccion" style="display:none;">
+        <section class="filters-row" id="filtersPLU"></section>
+        <section class="kpi-row" id="kpiPLU"></section>
+        <section class="charts-exec" id="gridPLU"></section>
+    </div>
+</section>
             </section>
             <section id="recepcion" class="dashboard-section" hidden>
-                <div class="card placeholder-card">
-                    <i class="fas fa-hourglass-half"></i>
-                    <h2>Recepción</h2>
-                    <p>Próximamente</p>
-                </div>
-            </section>
+    <div class="page-head">
+        <div>
+            <h1>Recepción</h1>
+            <p>Importaciones · Ingresos · Pendientes</p>
+        </div>
+    </div>
+
+    <nav class="subtabs" id="subTabsR">
+        <button type="button" class="subtab active" data-sub="packing"><i class="fas fa-boxes-packing"></i> Packing List</button>
+        <button type="button" class="subtab" data-sub="detalle"><i class="fas fa-clipboard-list"></i> Ingresos por PLU</button>
+    </nav>
+
+    <div id="subR-packing" class="subseccion">
+        <section class="filters-row" id="filtersPack"></section>
+        <section class="kpi-row" id="kpiPack"></section>
+        <section class="charts-exec" id="gridPack"></section>
+    </div>
+
+    <div id="subR-detalle" class="subseccion" style="display:none;">
+        <section class="filters-row" id="filtersDet"></section>
+        <section class="kpi-row" id="kpiDet"></section>
+        <section class="charts-exec" id="gridDet"></section>
+    </div>
+</section>
         </main>
     </div>
 
